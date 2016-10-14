@@ -42,13 +42,34 @@ func (d *Device) Start() error {
 	log.Println("Clearing FIFO...")
 	d.hrf.ClearFifo()
 
+	identified := map[uint32]bool{}
 	for {
 		msg := d.hrf.ReceiveFSKMessage()
 		if msg == nil {
 			time.Sleep(100 * time.Millisecond)
 		} else {
-			log.Println("Message:", msg)
+			log.Println("Received:", msg)
+
+			if _, ok := identified[msg.SensorId]; !ok {
+				d.Identify(msg.SensorId)
+				identified[msg.SensorId] = true
+			}
 		}
 	}
 	return nil
+}
+
+func (d *Device) Identify(sensorId uint32) {
+
+	log.Println("Asking for identification")
+	message := &Message{
+		ManuId:   engManufacturerId,
+		ProdId:   eTRVProductId,
+		SensorId: sensorId,
+		Records:  []Record{Identify{}},
+	}
+	err := d.hrf.SendFSKMessage(message)
+	if err != nil {
+		log.Println("Error sending", err)
+	}
 }

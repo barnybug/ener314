@@ -1,6 +1,7 @@
 package ener314
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -238,6 +239,43 @@ func (self *HRF) ReceiveFSKMessage() *Message {
 	return nil
 }
 
+func (self *HRF) SendFSKMessage(msg *Message) error {
+	data := EncodeMessage(msg)
+	// 0 before?
+	var buf bytes.Buffer
+	buf.WriteByte(MASK_WRITE_DATA)
+	buf.WriteByte(byte(len(data)))
+	buf.Write(data)
+
+	// switch to transmission mode
+	err := self.regW(ADDR_OPMODE, MODE_TRANSMITER)
+	if err != nil {
+		return err
+	}
+	self.WaitFor(ADDR_IRQFLAGS1, MASK_MODEREADY|MASK_TXREADY, true)
+
+	data = buf.Bytes()
+	_, err = self.dev.Write(data)
+	if err != nil {
+		return err
+	}
+	self.dev.Read(data)
+
+	// wait until the packet is sent
+	self.WaitFor(ADDR_IRQFLAGS2, MASK_PACKETSENT, true)
+	// HRF_assert_reg_val(ADDR_IRQFLAGS2, MASK_FIFONOTEMPTY|MASK_FIFOOVERRUN, FALSE, "are all bytes sent?")
+
+	// switch back to receiver mode
+	err = self.regW(ADDR_OPMODE, MODE_RECEIVER)
+	if err != nil {
+		return err
+	}
+	self.WaitFor(ADDR_IRQFLAGS1, MASK_MODEREADY, true)
+	log.Println("Sent:", msg)
+
+	return nil
+}
+
 func (self *HRF) regR(addr byte) byte {
 	buf := []byte{addr & 0x7f, 0}
 	self.dev.Write(buf)
@@ -246,7 +284,7 @@ func (self *HRF) regR(addr byte) byte {
 }
 
 func (self *HRF) regW(addr byte, val byte) error {
-	buf := []byte{addr | 0x80, val}
+	buf := []byte{addr | MASK_WRITE_DATA, val}
 	_, err := self.dev.Write(buf)
 	self.dev.Read(buf) // ignored
 	return err

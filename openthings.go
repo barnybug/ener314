@@ -134,6 +134,17 @@ func (v Voltage) Encode(buf io.ByteWriter) {
 	// TODO - encode signed fixed .8
 }
 
+type Identify struct{}
+
+func (i Identify) String() string {
+	return "Identify"
+}
+
+func (i Identify) Encode(buf io.ByteWriter) {
+	buf.WriteByte(OT_IDENTIFY)
+	buf.WriteByte(0)
+}
+
 type UnhandledRecord struct {
 	ID    byte
 	Type  byte
