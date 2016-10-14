@@ -2,6 +2,7 @@ package ener314
 
 import (
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -16,7 +17,7 @@ func NewDevice() *Device {
 func (d *Device) Start() error {
 	var err error
 
-	fmt.Println("Resetting...")
+	log.Println("Resetting...")
 	Reset()
 
 	d.hrf, err = NewHRF()
@@ -24,18 +25,21 @@ func (d *Device) Start() error {
 		return err
 	}
 
-	fmt.Println(d.hrf.GetVersion())
+	version := d.hrf.GetVersion()
+	if version != 36 {
+		return fmt.Errorf("Unexpected version: %d", version)
+	}
 
-	fmt.Println("Configuring FSK")
+	log.Println("Configuring FSK")
 	err = d.hrf.ConfigFSK()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println("Wait for ready...")
+	log.Println("Wait for ready...")
 	d.hrf.WaitFor(ADDR_IRQFLAGS1, MASK_MODEREADY, true)
 
-	fmt.Println("Clearing FIFO...")
+	log.Println("Clearing FIFO...")
 	d.hrf.ClearFifo()
 
 	for {
@@ -43,7 +47,7 @@ func (d *Device) Start() error {
 		if msg == nil {
 			time.Sleep(100 * time.Millisecond)
 		} else {
-			fmt.Println("Message:", msg)
+			log.Println("Message:", msg)
 		}
 	}
 	return nil

@@ -3,6 +3,7 @@ package ener314
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/davecheney/gpio"
@@ -225,9 +226,12 @@ func (self *HRF) ReceiveFSKMessage() *Message {
 		for i := 0; i < int(length); i += 1 {
 			data[i] = self.regR(ADDR_FIFO)
 		}
-		fmt.Println(hex.Dump(data))
-		message := DecodePacket(data)
-		fmt.Println(hex.Dump(data))
+		message, err := DecodePacket(data)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return nil
+		}
+		log.Println(hex.Dump(data))
 		return message
 	}
 

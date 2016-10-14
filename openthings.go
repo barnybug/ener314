@@ -1,6 +1,12 @@
 package ener314
 
-import "fmt"
+import (
+	"bytes"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"strconv"
+)
 
 const (
 	/* OpenThings definitions */
@@ -95,7 +101,7 @@ func (j Join) String() string {
 }
 
 type Temperature struct {
-	Value float32
+	Value float64
 }
 
 func (t Temperature) String() string {
@@ -103,7 +109,7 @@ func (t Temperature) String() string {
 }
 
 type Voltage struct {
-	Value float32
+	Value float64
 }
 
 func (v Voltage) String() string {
@@ -152,42 +158,131 @@ func decrypt(pid, pip uint16, data []byte) {
 	}
 }
 
-func decodeFloat32(typeDesc byte, value []byte) float32 {
-	return float32(value[0]) + float32(value[1])/0xff
+func decodeFixedPoint(value []byte, mantissa uint, signed bool) float64 {
+	var ret float64
+	sign := false
+	if signed && len(value) > 0 && (value[0]&0x80 != 0) {
+		value[0] = value[0] & 0x7f
+		sign = true
+	}
+
+	for _, b := range value {
+		ret = ret*256 + float64(b)
+	}
+	div := 1 << mantissa
+	if sign {
+		ret = -ret
+	}
+	return ret / float64(div)
 }
 
-func DecodePacket(data []byte) *Message {
+func decodeFloat64(typeDesc byte, value []byte) float64 {
+	switch typeDesc >> 4 {
+	case 0x0: // Unsigned x.0 normal integer
+		return decodeFixedPoint(value, 0, false)
+	case 0x1: // Unsigned x.4 fixed point integer
+		return decodeFixedPoint(value, 4, false)
+	case 0x2: // Unsigned x.8 fixed point integer
+		return decodeFixedPoint(value, 8, false)
+	case 0x3: // Unsigned x.12 fixed point integer
+		return decodeFixedPoint(value, 12, false)
+	case 0x4: // Unsigned x.16 fixed point integer
+		return decodeFixedPoint(value, 16, false)
+	case 0x5: // Unsigned x.20 fixed point integer
+		return decodeFixedPoint(value, 20, false)
+	case 0x6: // Unsigned x.24 fixed point integer
+		return decodeFixedPoint(value, 24, false)
+	case 0x7: // Characters
+		f64, _ := strconv.ParseFloat(string(value), 32)
+		return f64
+	case 0x8: // Signed x.0 normal integer
+		return decodeFixedPoint(value, 0, true)
+	case 0x9: // Signed x.8 fixed point integer
+		return decodeFixedPoint(value, 8, true)
+	case 0xa: // Signed x.16 fixed point integer
+		return decodeFixedPoint(value, 16, true)
+	case 0xb: // Signed x.24 fixed point integer
+		return decodeFixedPoint(value, 24, true)
+	case 0xc: // Enumeration
+		// Just treat as unsigned integer
+		return decodeFixedPoint(value, 0, false)
+	case 0xd, 0xe: // Reserved
+	case 0xf: // IEEE754-2008 floating point
+		// untesed - 32 or 64?
+		var ret float64
+		buf := bytes.NewReader(value)
+		binary.Read(buf, binary.LittleEndian, &ret)
+		return ret
+	}
+	return 0
+}
+
+func DecodePacket(data []byte) (*Message, error) {
 	pip := uint16(data[2])<<8 | uint16(data[3])
 	decrypt(encryptId, pip, data[4:])
+	return DecodeUnencryptedPacket(data)
+}
+
+var ErrShortPacket = errors.New("Short or corrupt packet")
+
+func DecodeUnencryptedPacket(data []byte) (*Message, error) {
+	ln := len(data)
+	if ln < 10 {
+		// absolute minimum:
+		// 2 manufacturer, product
+		// 2 encryption pip
+		// 3 sensor id
+		// 1 no records
+		// 2 crc
+		return nil, ErrShortPacket
+	}
 	message := Message{
 		ManuId:   data[0],
 		ProdId:   data[1],
 		SensorId: uint32(data[4])<<24 | uint32(data[5])<<16 | uint32(data[6]),
 	}
-	for i := 7; i < len(data); i += 2 {
+	// i + one byte + crc
+	for i := 7; true; i += 2 {
 		paramId := data[i]
 		if paramId == 0 {
 			// end of parameterss
 			break
 		}
+		if i >= ln-4 {
+			// at least [code] [typedesc] [crc] [crc]
+			return nil, ErrShortPacket
+		}
 
 		typeDesc := data[i+1]
 		dlen := typeDesc & 0x0f
+		if i+2+int(dlen)+2 >= ln {
+			// at least [code] [typedesc] [..variable..] [crc] [crc]
+			return nil, ErrShortPacket
+		}
+
 		value := data[i+2 : i+2+int(dlen)]
 		i += int(dlen)
+
+		// value length check
+		switch paramId {
+		case OT_TEMP_REPORT, OT_VOLTAGE:
+			if dlen == 0 {
+				return nil, ErrShortPacket
+			}
+		}
 
 		var record Record
 		switch paramId {
 		case OT_JOIN_CMD:
 			record = Join{}
 		case OT_TEMP_REPORT:
-			record = Temperature{decodeFloat32(typeDesc, value)}
+			record = Temperature{decodeFloat64(typeDesc, value)}
 		case OT_VOLTAGE:
-			record = Voltage{decodeFloat32(typeDesc, value)}
+			record = Voltage{decodeFloat64(typeDesc, value)}
 		default:
 			record = UnhandledRecord{paramId, typeDesc, value}
 		}
 		message.Records = append(message.Records, record)
 	}
-	return &message
+	return &message, nil
 }
