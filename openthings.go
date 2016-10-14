@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
+	"math/rand"
 	"strconv"
 )
 
@@ -92,12 +94,18 @@ const (
 
 type Record interface {
 	String() string
+	Encode(buf io.ByteWriter)
 }
 
 type Join struct{}
 
 func (j Join) String() string {
 	return "Join"
+}
+
+func (j Join) Encode(buf io.ByteWriter) {
+	buf.WriteByte(OT_JOIN_CMD)
+	buf.WriteByte(0)
 }
 
 type Temperature struct {
@@ -108,12 +116,22 @@ func (t Temperature) String() string {
 	return fmt.Sprintf("Temperature{%f}", t.Value)
 }
 
+func (t Temperature) Encode(buf io.ByteWriter) {
+	buf.WriteByte(OT_TEMP_REPORT)
+	// TODO - encode signed fixed .8
+}
+
 type Voltage struct {
 	Value float64
 }
 
 func (v Voltage) String() string {
 	return fmt.Sprintf("Voltage{%f}", v.Value)
+}
+
+func (v Voltage) Encode(buf io.ByteWriter) {
+	buf.WriteByte(OT_VOLTAGE)
+	// TODO - encode signed fixed .8
 }
 
 type UnhandledRecord struct {
@@ -124,6 +142,10 @@ type UnhandledRecord struct {
 
 func (t UnhandledRecord) String() string {
 	return fmt.Sprintf("Unhandled{%x,%x,%v}", t.ID, t.Type, t.Value)
+}
+
+func (t UnhandledRecord) Encode(buf io.ByteWriter) {
+	// Unhandled
 }
 
 type Message struct {
@@ -224,6 +246,7 @@ func DecodePacket(data []byte) (*Message, error) {
 }
 
 var ErrShortPacket = errors.New("Short or corrupt packet")
+var ErrCRCFail = errors.New("CRC fail")
 
 func DecodeUnencryptedPacket(data []byte) (*Message, error) {
 	ln := len(data)
@@ -236,10 +259,18 @@ func DecodeUnencryptedPacket(data []byte) (*Message, error) {
 		// 2 crc
 		return nil, ErrShortPacket
 	}
+
+	// check CRC
+	crc := uint16(data[ln-2])<<8 + uint16(data[ln-1])
+	expected := calculateCRC(data[4 : ln-2])
+	if crc != expected {
+		return nil, ErrCRCFail
+	}
+
 	message := Message{
 		ManuId:   data[0],
 		ProdId:   data[1],
-		SensorId: uint32(data[4])<<24 | uint32(data[5])<<16 | uint32(data[6]),
+		SensorId: uint32(data[4])<<16 | uint32(data[5])<<8 | uint32(data[6]),
 	}
 	// i + one byte + crc
 	for i := 7; true; i += 2 {
@@ -285,4 +316,55 @@ func DecodeUnencryptedPacket(data []byte) (*Message, error) {
 		message.Records = append(message.Records, record)
 	}
 	return &message, nil
+}
+
+func calculateCRC(data []byte) uint16 {
+	var rem uint16
+
+	for _, d := range data {
+		rem = rem ^ uint16(d)<<8
+		for bit := 8; bit > 0; bit -= 1 {
+			if rem&(1<<15) == 0 {
+				rem = rem << 1
+			} else {
+				rem = (rem << 1) ^ 0x1021
+			}
+		}
+	}
+	return rem
+}
+
+func encrypt(pid, pip uint16, data []byte) {
+	// reversable: encrypt is decrypt
+	decrypt(pid, pip, data)
+}
+
+func EncodeMessage(message *Message) []byte {
+	pip := uint16(rand.Uint32())
+	data := EncodeData(message, pip)
+	encrypt(encryptId, pip, data[4:])
+	return data
+}
+
+func EncodeData(message *Message, pip uint16) []byte {
+	var buf bytes.Buffer
+	buf.WriteByte(message.ManuId)
+	buf.WriteByte(message.ProdId)
+	buf.WriteByte(byte(pip >> 8))
+	buf.WriteByte(byte(pip))
+
+	buf.WriteByte(byte(message.SensorId >> 16))
+	buf.WriteByte(byte(message.SensorId >> 8))
+	buf.WriteByte(byte(message.SensorId))
+
+	for _, record := range message.Records {
+		record.Encode(&buf)
+	}
+	buf.WriteByte(0) // end of params
+
+	// only encrypted data is CRCed
+	crc := calculateCRC(buf.Bytes()[5:])
+	buf.WriteByte(byte(crc >> 8))
+	buf.WriteByte(byte(crc))
+	return buf.Bytes()
 }

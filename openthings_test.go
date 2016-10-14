@@ -58,27 +58,35 @@ func TestDecodeFloat64(t *testing.T) {
 }
 
 func ExampleDecodePacketJoin() {
-	packet := []byte{0x04, 0x03, 0x65, 0xce, 0xa0, 0x97, 0x51, 0xac, 0xc2, 0xf4, 0xa2, 0x19}
+	packet := []byte{0x04, 0x03, 0x04, 0x42, 0xd1, 0xf8, 0x17, 0x05, 0xd1, 0xd9, 0x0f, 0x30}
 	message, _ := DecodePacket(packet)
-	fmt.Printf("%s\n", message)
+	fmt.Println(message)
 	// Output:
-	// {ManuId:4 ProdId:3 SensorId:09007f Records:[Join]}
+	// {ManuId:4 ProdId:3 SensorId:00097f Records:[Join]}
 }
 
 func ExampleDecodePacketVoltage() {
 	packet := []byte{0x04, 0x03, 0x13, 0x04, 0x20, 0x3b, 0x19, 0xd5, 0x8c, 0xf1, 0x5f, 0xf1, 0xd3, 0x7b}
 	message, _ := DecodePacket(packet)
-	fmt.Printf("%s\n", message)
+	fmt.Println(message)
 	// Output:
-	// {ManuId:4 ProdId:3 SensorId:09007f Records:[Voltage{3.121094}]}
+	// {ManuId:4 ProdId:3 SensorId:00097f Records:[Voltage{3.121094}]}
 }
 
 func ExampleDecodePacketTemp() {
 	packet := []byte{0x04, 0x03, 0x0f, 0x42, 0x89, 0x00, 0x3a, 0x46, 0x9c, 0xa6, 0xe2, 0x35, 0x1f, 0xdc}
 	message, _ := DecodePacket(packet)
-	fmt.Printf("%s\n", message)
+	fmt.Println(message)
 	// Output:
-	// {ManuId:4 ProdId:3 SensorId:09007f Records:[Temperature{17.699219}]}
+	// {ManuId:4 ProdId:3 SensorId:00097f Records:[Temperature{17.699219}]}
+}
+
+func ExampleCRCFailure() {
+	packet := []byte{0x04, 0x03, 0x04, 0x42, 0xd1, 0xf8, 0x17, 0x05, 0xd1, 0xd9, 0x0f, 0x31}
+	_, err := DecodePacket(packet)
+	fmt.Println(err)
+	// Output:
+	// CRC fail
 }
 
 var badPacketsTable = []string{
@@ -97,7 +105,6 @@ var badPacketsTable = []string{
 	"04 03 49 10 00 09 7f 74 92 12 33",
 	"04 03 49 10 00 09 7f 74 92 12 33 00",
 	"04 03 49 10 00 09 7f 74 92 12 33 00 69",
-	// crc failure
 	// zero length number
 	"04 03 07 61 00 09 7f 74 90 92 12 00 00 39 27",
 	// junk
@@ -114,4 +121,26 @@ func TestBadPackets(t *testing.T) {
 		assert.Error(t, err, "error")
 		assert.Nil(t, ret, "decodes to nil")
 	}
+}
+
+func ExampleEncodeData() {
+	message := Message{
+		ManuId: 0x04, ProdId: 0x03, SensorId: 0x00098b,
+		Records: []Record{Join{}},
+	}
+	data := EncodeData(&message, 0x78cf)
+	fmt.Println(hex.EncodeToString(data))
+	// Output:
+	// 040378cf00098bea00000cab
+}
+
+func ExampleEncodeMessageJoin() {
+	message := Message{
+		ManuId: 0x04, ProdId: 0x03, SensorId: 0x00097f,
+		Records: []Record{Join{}},
+	}
+	data := EncodeMessage(&message)
+	fmt.Println(hex.EncodeToString(data))
+	// Output:
+	// 04030442d1f81705d1d90f30
 }
