@@ -34,7 +34,6 @@ func (t Temperature) Encode(buf io.ByteWriter) {
 	for _, b := range encodeFloat64(ENC_SFPp8, t.Value) {
 		buf.WriteByte(b)
 	}
-	buf.WriteByte(0)
 }
 
 type Voltage struct {
@@ -137,4 +136,19 @@ func (v ExerciseValve) String() string {
 func (v ExerciseValve) Encode(buf io.ByteWriter) {
 	buf.WriteByte(OT_EXERCISE_VALVE)
 	buf.WriteByte(0)
+}
+
+type ReportInterval struct {
+	Value uint16
+}
+
+func (v ReportInterval) String() string {
+	return "ReportInterval"
+}
+
+func (v ReportInterval) Encode(buf io.ByteWriter) {
+	buf.WriteByte(OT_SET_REPORTING_INTERVAL)
+	buf.WriteByte(0x02)
+	buf.WriteByte(byte(v.Value >> 8))
+	buf.WriteByte(byte(v.Value))
 }

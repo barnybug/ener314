@@ -112,3 +112,12 @@ func (d *Device) TargetTemperature(sensorId uint32, temp float64) {
 	log.Printf("Setting target temperature for device %06x to %.2fC", sensorId, temp)
 	d.Respond(sensorId, Temperature{temp})
 }
+
+func (d *Device) ReportInterval(sensorId uint32, interval uint16) {
+	if interval < 1 || interval > 3600 {
+		log.Printf("Interval out of range: 1 < %.2f < 3600, refusing", interval)
+		return
+	}
+	log.Printf("Setting report interval for device %06x to %ds", sensorId, interval)
+	d.Respond(sensorId, ReportInterval{interval})
+}

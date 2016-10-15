@@ -62,6 +62,11 @@ var encodeFloat64Table = []struct {
 	value    float64
 	expected []byte
 }{
+	// 0000 Unsigned x.0 normal integer
+	{ENC_UINT, 128, []byte{0x01, 0x80}},
+	{ENC_UINT, 360, []byte{0x02, 0x01, 0x68}},
+	{ENC_UINT, 75900, []byte{0x03, 0x1, 0x28, 0x7c}},
+
 	// 1001 Signed x.8 fixed point integer
 	{ENC_SFPp8, 9.5, []byte{0x92, 0x09, 0x80}},
 	{ENC_SFPp8, 10.0, []byte{0x92, 0x0a, 0x00}},
