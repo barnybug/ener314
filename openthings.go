@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io"
 	"math/rand"
 	"strconv"
 )
@@ -90,74 +89,24 @@ const (
 	*/
 
 	OT_CRC = 0x00
+
+	ENC_UINT   = 0x0
+	ENC_UFPp4  = 0x1
+	ENC_UFPp8  = 0x2
+	ENC_UFPp12 = 0x3
+	ENC_UFPp16 = 0x4
+	ENC_UFPp20 = 0x5
+	ENC_UFPp24 = 0x6
+	ENC_CHARS  = 0x7
+	ENC_SINT   = 0x8
+	ENC_SFPp8  = 0x9
+	ENC_SFPp16 = 0xa
+	ENC_SFPp24 = 0xb
+	ENC_ENUM   = 0xc
+	ENC_RESV1  = 0xd
+	ENC_RESV2  = 0xe
+	ENC_IEEE   = 0xf
 )
-
-type Record interface {
-	String() string
-	Encode(buf io.ByteWriter)
-}
-
-type Join struct{}
-
-func (j Join) String() string {
-	return "Join"
-}
-
-func (j Join) Encode(buf io.ByteWriter) {
-	buf.WriteByte(OT_JOIN_CMD)
-	buf.WriteByte(0)
-}
-
-type Temperature struct {
-	Value float64
-}
-
-func (t Temperature) String() string {
-	return fmt.Sprintf("Temperature{%f}", t.Value)
-}
-
-func (t Temperature) Encode(buf io.ByteWriter) {
-	buf.WriteByte(OT_TEMP_REPORT)
-	// TODO - encode signed fixed .8
-}
-
-type Voltage struct {
-	Value float64
-}
-
-func (v Voltage) String() string {
-	return fmt.Sprintf("Voltage{%f}", v.Value)
-}
-
-func (v Voltage) Encode(buf io.ByteWriter) {
-	buf.WriteByte(OT_VOLTAGE)
-	// TODO - encode signed fixed .8
-}
-
-type Identify struct{}
-
-func (i Identify) String() string {
-	return "Identify"
-}
-
-func (i Identify) Encode(buf io.ByteWriter) {
-	buf.WriteByte(OT_IDENTIFY)
-	buf.WriteByte(0)
-}
-
-type UnhandledRecord struct {
-	ID    byte
-	Type  byte
-	Value []byte
-}
-
-func (t UnhandledRecord) String() string {
-	return fmt.Sprintf("Unhandled{%x,%x,%v}", t.ID, t.Type, t.Value)
-}
-
-func (t UnhandledRecord) Encode(buf io.ByteWriter) {
-	// Unhandled
-}
 
 type Message struct {
 	ManuId   byte
@@ -211,36 +160,36 @@ func decodeFixedPoint(value []byte, mantissa uint, signed bool) float64 {
 
 func decodeFloat64(typeDesc byte, value []byte) float64 {
 	switch typeDesc >> 4 {
-	case 0x0: // Unsigned x.0 normal integer
+	case ENC_UINT: // Unsigned x.0 normal integer
 		return decodeFixedPoint(value, 0, false)
-	case 0x1: // Unsigned x.4 fixed point integer
+	case ENC_UFPp4: // Unsigned x.4 fixed point integer
 		return decodeFixedPoint(value, 4, false)
-	case 0x2: // Unsigned x.8 fixed point integer
+	case ENC_UFPp8: // Unsigned x.8 fixed point integer
 		return decodeFixedPoint(value, 8, false)
-	case 0x3: // Unsigned x.12 fixed point integer
+	case ENC_UFPp12: // Unsigned x.12 fixed point integer
 		return decodeFixedPoint(value, 12, false)
-	case 0x4: // Unsigned x.16 fixed point integer
+	case ENC_UFPp16: // Unsigned x.16 fixed point integer
 		return decodeFixedPoint(value, 16, false)
-	case 0x5: // Unsigned x.20 fixed point integer
+	case ENC_UFPp20: // Unsigned x.20 fixed point integer
 		return decodeFixedPoint(value, 20, false)
-	case 0x6: // Unsigned x.24 fixed point integer
+	case ENC_UFPp24: // Unsigned x.24 fixed point integer
 		return decodeFixedPoint(value, 24, false)
-	case 0x7: // Characters
+	case ENC_CHARS: // Characters
 		f64, _ := strconv.ParseFloat(string(value), 32)
 		return f64
-	case 0x8: // Signed x.0 normal integer
+	case ENC_SINT: // Signed x.0 normal integer
 		return decodeFixedPoint(value, 0, true)
-	case 0x9: // Signed x.8 fixed point integer
+	case ENC_SFPp8: // Signed x.8 fixed point integer
 		return decodeFixedPoint(value, 8, true)
-	case 0xa: // Signed x.16 fixed point integer
+	case ENC_SFPp16: // Signed x.16 fixed point integer
 		return decodeFixedPoint(value, 16, true)
-	case 0xb: // Signed x.24 fixed point integer
+	case ENC_SFPp24: // Signed x.24 fixed point integer
 		return decodeFixedPoint(value, 24, true)
-	case 0xc: // Enumeration
+	case ENC_ENUM: // Enumeration
 		// Just treat as unsigned integer
 		return decodeFixedPoint(value, 0, false)
-	case 0xd, 0xe: // Reserved
-	case 0xf: // IEEE754-2008 floating point
+	case ENC_RESV1, ENC_RESV2: // Reserved
+	case ENC_IEEE: // IEEE754-2008 floating point
 		// untesed - 32 or 64?
 		var ret float64
 		buf := bytes.NewReader(value)
@@ -250,16 +199,19 @@ func decodeFloat64(typeDesc byte, value []byte) float64 {
 	return 0
 }
 
-func DecodePacket(data []byte) (*Message, error) {
+func cryptPacket(data []byte) {
+	// reversable: encrypt is decrypt
+	if len(data) <= 4 {
+		return
+	}
 	pip := uint16(data[2])<<8 | uint16(data[3])
 	decrypt(encryptId, pip, data[4:])
-	return DecodeUnencryptedPacket(data)
 }
 
 var ErrShortPacket = errors.New("Short or corrupt packet")
 var ErrCRCFail = errors.New("CRC fail")
 
-func DecodeUnencryptedPacket(data []byte) (*Message, error) {
+func decodePacket(data []byte) (*Message, error) {
 	ln := len(data)
 	if ln < 10 {
 		// absolute minimum:
@@ -345,19 +297,14 @@ func calculateCRC(data []byte) uint16 {
 	return rem
 }
 
-func encrypt(pid, pip uint16, data []byte) {
-	// reversable: encrypt is decrypt
-	decrypt(pid, pip, data)
-}
-
-func EncodeMessage(message *Message) []byte {
+func encodeMessage(message *Message) []byte {
 	pip := uint16(rand.Uint32())
-	data := EncodeData(message, pip)
-	encrypt(encryptId, pip, data[4:])
+	data := encodeData(message, pip)
+	cryptPacket(data)
 	return data
 }
 
-func EncodeData(message *Message, pip uint16) []byte {
+func encodeData(message *Message, pip uint16) []byte {
 	var buf bytes.Buffer
 	buf.WriteByte(message.ManuId)
 	buf.WriteByte(message.ProdId)
@@ -378,4 +325,47 @@ func EncodeData(message *Message, pip uint16) []byte {
 	buf.WriteByte(byte(crc >> 8))
 	buf.WriteByte(byte(crc))
 	return buf.Bytes()
+}
+
+func encodeFixedPoint(value float64, mantissa uint, signed bool) []byte {
+	return []byte{}
+}
+
+func encodeFloat64(typ byte, value float64) []byte {
+	switch typ {
+	case ENC_UINT: // Unsigned x.0 normal integer
+		return encodeFixedPoint(value, 0, false)
+	case ENC_UFPp4: // Unsigned x.4 fixed point integer
+		return encodeFixedPoint(value, 4, false)
+	case ENC_UFPp8: // Unsigned x.8 fixed point integer
+		return encodeFixedPoint(value, 8, false)
+	case ENC_UFPp12: // Unsigned x.12 fixed point integer
+		return encodeFixedPoint(value, 12, false)
+	case ENC_UFPp16: // Unsigned x.16 fixed point integer
+		return encodeFixedPoint(value, 16, false)
+	case ENC_UFPp20: // Unsigned x.20 fixed point integer
+		return encodeFixedPoint(value, 20, false)
+	case ENC_UFPp24: // Unsigned x.24 fixed point integer
+		return encodeFixedPoint(value, 24, false)
+	case ENC_CHARS: // Characters
+		return []byte(fmt.Sprint(value))
+	case ENC_SINT: // Signed x.0 normal integer
+		return encodeFixedPoint(value, 0, true)
+	case ENC_SFPp8: // Signed x.8 fixed point integer
+		return encodeFixedPoint(value, 8, true)
+	case ENC_SFPp16: // Signed x.16 fixed point integer
+		return encodeFixedPoint(value, 16, true)
+	case ENC_SFPp24: // Signed x.24 fixed point integer
+		return encodeFixedPoint(value, 24, true)
+	case ENC_ENUM: // Enumeration
+		// Just treat as unsigned integer
+		return encodeFixedPoint(value, 0, false)
+	case ENC_RESV1, ENC_RESV2: // Reserved
+	case ENC_IEEE: // IEEE754-2008 floating point
+		// untesed - 32 or 64?
+		var buf bytes.Buffer
+		binary.Write(&buf, binary.LittleEndian, value)
+		return buf.Bytes()
+	}
+	return nil
 }

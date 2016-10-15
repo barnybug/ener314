@@ -227,12 +227,13 @@ func (self *HRF) ReceiveFSKMessage() *Message {
 		for i := 0; i < int(length); i += 1 {
 			data[i] = self.regR(ADDR_FIFO)
 		}
-		message, err := DecodePacket(data)
+		cryptPacket(data)
+		log.Println(hex.Dump(data)) // log decrypted packet
+		message, err := decodePacket(data)
 		if err != nil {
 			fmt.Println("Error:", err)
 			return nil
 		}
-		log.Println(hex.Dump(data))
 		return message
 	}
 
@@ -240,12 +241,11 @@ func (self *HRF) ReceiveFSKMessage() *Message {
 }
 
 func (self *HRF) SendFSKMessage(msg *Message) error {
-	data := EncodeMessage(msg)
-	// 0 before?
+	data := encodeMessage(msg)
 	var buf bytes.Buffer
-	buf.WriteByte(MASK_WRITE_DATA)
-	buf.WriteByte(byte(len(data)))
-	buf.Write(data)
+	buf.WriteByte(MASK_WRITE_DATA) // address
+	buf.WriteByte(byte(len(data))) // packet length
+	buf.Write(data)                // packet
 
 	// switch to transmission mode
 	err := self.regW(ADDR_OPMODE, MODE_TRANSMITER)

@@ -59,7 +59,8 @@ func TestDecodeFloat64(t *testing.T) {
 
 func ExampleDecodePacketJoin() {
 	packet := []byte{0x04, 0x03, 0x04, 0x42, 0xd1, 0xf8, 0x17, 0x05, 0xd1, 0xd9, 0x0f, 0x30}
-	message, _ := DecodePacket(packet)
+	cryptPacket(packet)
+	message, _ := decodePacket(packet)
 	fmt.Println(message)
 	// Output:
 	// {ManuId:4 ProdId:3 SensorId:00097f Records:[Join]}
@@ -67,7 +68,8 @@ func ExampleDecodePacketJoin() {
 
 func ExampleDecodePacketVoltage() {
 	packet := []byte{0x04, 0x03, 0x13, 0x04, 0x20, 0x3b, 0x19, 0xd5, 0x8c, 0xf1, 0x5f, 0xf1, 0xd3, 0x7b}
-	message, _ := DecodePacket(packet)
+	cryptPacket(packet)
+	message, _ := decodePacket(packet)
 	fmt.Println(message)
 	// Output:
 	// {ManuId:4 ProdId:3 SensorId:00097f Records:[Voltage{3.121094}]}
@@ -75,7 +77,8 @@ func ExampleDecodePacketVoltage() {
 
 func ExampleDecodePacketTemp() {
 	packet := []byte{0x04, 0x03, 0x0f, 0x42, 0x89, 0x00, 0x3a, 0x46, 0x9c, 0xa6, 0xe2, 0x35, 0x1f, 0xdc}
-	message, _ := DecodePacket(packet)
+	cryptPacket(packet)
+	message, _ := decodePacket(packet)
 	fmt.Println(message)
 	// Output:
 	// {ManuId:4 ProdId:3 SensorId:00097f Records:[Temperature{17.699219}]}
@@ -83,7 +86,8 @@ func ExampleDecodePacketTemp() {
 
 func ExampleCRCFailure() {
 	packet := []byte{0x04, 0x03, 0x04, 0x42, 0xd1, 0xf8, 0x17, 0x05, 0xd1, 0xd9, 0x0f, 0x31}
-	_, err := DecodePacket(packet)
+	cryptPacket(packet)
+	_, err := decodePacket(packet)
 	fmt.Println(err)
 	// Output:
 	// CRC fail
@@ -117,7 +121,7 @@ func TestBadPackets(t *testing.T) {
 		if err != nil {
 			assert.NoError(t, err, "decode hex")
 		}
-		ret, err := DecodeUnencryptedPacket(data)
+		ret, err := decodePacket(data)
 		assert.Error(t, err, "error")
 		assert.Nil(t, ret, "decodes to nil")
 	}
@@ -128,7 +132,7 @@ func ExampleEncodeData() {
 		ManuId: 0x04, ProdId: 0x03, SensorId: 0x00098b,
 		Records: []Record{Join{}},
 	}
-	data := EncodeData(&message, 0x78cf)
+	data := encodeData(&message, 0x78cf)
 	fmt.Println(hex.EncodeToString(data))
 	// Output:
 	// 040378cf00098bea00000cab
@@ -139,7 +143,7 @@ func ExampleEncodeMessageJoin() {
 		ManuId: 0x04, ProdId: 0x03, SensorId: 0x00097f,
 		Records: []Record{Join{}},
 	}
-	data := EncodeMessage(&message)
+	data := encodeMessage(&message)
 	fmt.Println(hex.EncodeToString(data))
 	// Output:
 	// 04030442d1f81705d1d90f30
