@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/barnybug/ener314/rpio"
-	"github.com/quinte17/spi"
+	"github.com/barnybug/ener314/spi"
 )
 
 type HRF struct {
-	dev *spi.SPI
+	spi *spi.SPI
 }
 
 const (
@@ -132,7 +132,7 @@ func NewHRF() (*HRF, error) {
 	if err != nil {
 		return nil, err
 	}
-	inst := &HRF{dev: dev}
+	inst := &HRF{spi: dev}
 	return inst, err
 }
 
@@ -261,11 +261,10 @@ func (self *HRF) SendFSKMessage(msg *Message) error {
 	self.WaitFor(ADDR_IRQFLAGS1, MASK_MODEREADY|MASK_TXREADY, true)
 
 	data = buf.Bytes()
-	_, err = self.dev.Write(data)
+	err = self.spi.Xfer(data)
 	if err != nil {
 		return err
 	}
-	self.dev.Read(data)
 
 	// wait until the packet is sent
 	self.WaitFor(ADDR_IRQFLAGS2, MASK_PACKETSENT, true)
@@ -284,14 +283,12 @@ func (self *HRF) SendFSKMessage(msg *Message) error {
 
 func (self *HRF) regR(addr byte) byte {
 	buf := []byte{addr & 0x7f, 0}
-	self.dev.Write(buf)
-	self.dev.Read(buf)
+	self.spi.Xfer(buf)
 	return buf[1]
 }
 
 func (self *HRF) regW(addr byte, val byte) error {
 	buf := []byte{addr | MASK_WRITE_DATA, val}
-	_, err := self.dev.Write(buf)
-	self.dev.Read(buf) // ignored
+	err := self.spi.Xfer(buf)
 	return err
 }
