@@ -7,8 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/davecheney/gpio"
-	"github.com/davecheney/gpio/rpi"
+	"github.com/barnybug/ener314/rpio"
 	"github.com/quinte17/spi"
 )
 
@@ -124,6 +123,8 @@ const (
 	/* OOK Message Parameters */
 	OOK_BUF_SIZE           = 17
 	OOK_MSG_ADDRESS_LENGTH = 10 /* 10 bytes in address */
+
+	ResetPin = 25
 )
 
 func NewHRF() (*HRF, error) {
@@ -141,13 +142,18 @@ type Cmd struct {
 }
 
 func Reset() error {
-	pin, err := rpi.OpenPin(rpi.GPIO_P1_22, gpio.ModeOutput)
+	err := rpio.Open()
 	if err != nil {
 		return err
 	}
-	pin.Set()
+	defer rpio.Close()
+
+	pin := rpio.Pin(ResetPin)
+	pin.Output()
+
+	pin.High()
 	time.Sleep(100 * time.Millisecond)
-	pin.Clear()
+	pin.Low()
 	time.Sleep(100 * time.Millisecond)
 
 	return nil

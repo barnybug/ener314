@@ -14,5 +14,6 @@ func fatalIfErr(err error) {
 
 func main() {
 	dev := ener314.NewDevice()
-	dev.Start()
+	err := dev.Start()
+	fatalIfErr(err)
 }

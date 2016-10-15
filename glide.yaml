@@ -1,6 +1,3 @@
 package: github.com/barnybug/ener314
 import:
-- package: github.com/davecheney/gpio
-  subpackages:
-  - rpi
 - package: github.com/quinte17/spi

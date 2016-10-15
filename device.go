@@ -18,7 +18,10 @@ func (d *Device) Start() error {
 	var err error
 
 	log.Println("Resetting...")
-	Reset()
+	err = Reset()
+	if err != nil {
+		return err
+	}
 
 	d.hrf, err = NewHRF()
 	if err != nil {
