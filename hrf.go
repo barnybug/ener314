@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/barnybug/ener314/rpio"
@@ -234,7 +233,7 @@ func (self *HRF) ReceiveFSKMessage() *Message {
 			data[i] = self.regR(ADDR_FIFO)
 		}
 		cryptPacket(data)
-		log.Println("<-", hex.EncodeToString(data)) // log decrypted packet
+		logs(LOG_TRACE, "<-", hex.EncodeToString(data)) // log decrypted packet
 		message, err := decodePacket(data)
 		if err != nil {
 			fmt.Println("Error:", err)
@@ -248,7 +247,7 @@ func (self *HRF) ReceiveFSKMessage() *Message {
 
 func (self *HRF) SendFSKMessage(msg *Message) error {
 	data := encodeMessage(msg)
-	log.Println("->", hex.EncodeToString(data)) // log decrypted packet
+	logs(LOG_TRACE, "->", hex.EncodeToString(data)) // log decrypted packet
 	encryptData(data)
 
 	var buf bytes.Buffer
@@ -279,7 +278,7 @@ func (self *HRF) SendFSKMessage(msg *Message) error {
 		return err
 	}
 	self.WaitFor(ADDR_IRQFLAGS1, MASK_MODEREADY, true)
-	log.Println("Sent:", msg)
+	logs(LOG_TRACE, "Sent:", msg)
 
 	return nil
 }

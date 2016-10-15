@@ -15,6 +15,7 @@ func fatalIfErr(err error) {
 }
 
 func main() {
+	ener314.SetLevel(ener314.LOG_TRACE)
 	dev := ener314.NewDevice()
 	err := dev.Start()
 	fatalIfErr(err)
@@ -34,9 +35,8 @@ func main() {
 			dev.Join(msg.SensorId)
 		case ener314.Temperature:
 			log.Printf("%06x Temperature: %.2f°C\n", msg.SensorId, t.Value)
-			if msg.SensorId == 0x00098b {
-				dev.TargetTemperature(msg.SensorId, 25)
-			}
+			// dev.TargetTemperature(msg.SensorId, 10)
+			// dev.ReportInterval(msg.SensorId, 1)
 			// dev.Voltage(msg.SensorId)
 			// dev.Diagnostics(msg.SensorId)
 		case ener314.Voltage:
