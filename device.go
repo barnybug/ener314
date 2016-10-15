@@ -93,3 +93,8 @@ func (d *Device) Voltage(sensorId uint32) {
 	log.Printf("Requesting Voltage from device %06x", sensorId)
 	d.Respond(sensorId, Voltage{})
 }
+
+func (d *Device) ExerciseValve(sensorId uint32) {
+	log.Printf("Requesting exercise value for device %06x", sensorId)
+	d.Respond(sensorId, ExerciseValve{})
+}

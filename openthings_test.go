@@ -84,6 +84,14 @@ func ExampleDecodePacketTemp() {
 	// {ManuId:4 ProdId:3 SensorId:00097f Records:[Temperature{17.699219}]}
 }
 
+func ExampleDecodePacketDiagnostics() {
+	packet, _ := hex.DecodeString("0403704d00097f2602020000ed6a")
+	message, _ := decodePacket(packet)
+	fmt.Println(message)
+	// Output:
+	// {ManuId:4 ProdId:3 SensorId:00097f Records:[Diagnostics{512,[Valve exercise was successful]}]}
+}
+
 func ExampleCRCFailure() {
 	packet := []byte{0x04, 0x03, 0x04, 0x42, 0xd1, 0xf8, 0x17, 0x05, 0xd1, 0xd9, 0x0f, 0x31}
 	cryptPacket(packet)

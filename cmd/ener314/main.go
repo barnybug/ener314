@@ -34,7 +34,7 @@ func main() {
 			dev.Join(msg.SensorId)
 		case ener314.Temperature:
 			log.Printf("%06x Temperature: %.2f°C\n", msg.SensorId, t.Value)
-			dev.Voltage(msg.SensorId)
+			// dev.ExerciseValve(msg.SensorId)
 		case ener314.Voltage:
 			log.Printf("%06x Voltage: %.2fV\n", msg.SensorId, t.Value)
 		}

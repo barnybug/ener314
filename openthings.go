@@ -199,6 +199,20 @@ func decodeFloat64(typeDesc byte, value []byte) float64 {
 	return 0
 }
 
+func decodeUint16(typeDesc byte, value []byte) uint16 {
+	switch typeDesc >> 4 {
+	case ENC_UINT: // Unsigned x.0 normal integer
+		var ret uint16
+		for _, b := range value {
+			ret = ret<<8 + uint16(b)
+		}
+		return ret
+	default:
+		// others unimplemented
+		return 0
+	}
+}
+
 func cryptPacket(data []byte) {
 	// reversable: encrypt is decrypt
 	if len(data) <= 4 {
@@ -259,7 +273,7 @@ func decodePacket(data []byte) (*Message, error) {
 
 		// value length check
 		switch paramId {
-		case OT_TEMP_REPORT, OT_VOLTAGE:
+		case OT_TEMP_REPORT, OT_VOLTAGE, OT_REPORT_DIAGNOSTICS:
 			if dlen == 0 {
 				return nil, ErrShortPacket
 			}
@@ -273,6 +287,8 @@ func decodePacket(data []byte) (*Message, error) {
 			record = Temperature{decodeFloat64(typeDesc, value)}
 		case OT_VOLTAGE:
 			record = Voltage{decodeFloat64(typeDesc, value)}
+		case OT_REPORT_DIAGNOSTICS:
+			record = Diagnostics{decodeUint16(typeDesc, value)}
 		default:
 			record = UnhandledRecord{paramId, typeDesc, value}
 		}
