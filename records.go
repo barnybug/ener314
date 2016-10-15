@@ -31,7 +31,7 @@ func (t Temperature) String() string {
 
 func (t Temperature) Encode(buf io.ByteWriter) {
 	buf.WriteByte(OT_TEMP_REPORT)
-	// TODO - encode signed fixed .8
+	buf.WriteByte(0)
 }
 
 type Voltage struct {
@@ -44,7 +44,7 @@ func (v Voltage) String() string {
 
 func (v Voltage) Encode(buf io.ByteWriter) {
 	buf.WriteByte(OT_VOLTAGE)
-	// TODO - encode signed fixed .8
+	buf.WriteByte(0)
 }
 
 type UnhandledRecord struct {
@@ -60,6 +60,8 @@ func (t UnhandledRecord) String() string {
 func (t UnhandledRecord) Encode(buf io.ByteWriter) {
 	// Unhandled
 }
+
+// Commands
 
 type Identify struct{}
 
@@ -80,5 +82,16 @@ func (i TargetTemperature) String() string {
 
 func (i TargetTemperature) Encode(buf io.ByteWriter) {
 	buf.WriteByte(OT_TEMP_SET)
+	buf.WriteByte(0)
+}
+
+type JoinReport struct{}
+
+func (i JoinReport) String() string {
+	return "JoinReport"
+}
+
+func (i JoinReport) Encode(buf io.ByteWriter) {
+	buf.WriteByte(OT_JOIN_RESP)
 	buf.WriteByte(0)
 }

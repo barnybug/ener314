@@ -11,9 +11,9 @@ import (
 
 const (
 	/* OpenThings definitions */
-	engManufacturerId = 0x04 // Energenie Manufacturer Id
-	eTRVProductId     = 0x3  // Product ID for eTRV
-	encryptId         = 0xf2 // Encryption ID for eTRV
+	energenieManuId = 0x04 // Energenie Manufacturer Id
+	eTRVProdId      = 0x3  // Product ID for eTRV
+	encryptId       = 0xf2 // Encryption ID for eTRV
 
 	OT_JOIN_RESP = 0x6A
 	OT_JOIN_CMD  = 0xEA
@@ -297,19 +297,20 @@ func calculateCRC(data []byte) uint16 {
 	return rem
 }
 
-func encodeMessage(message *Message) []byte {
+func encryptData(data []byte) {
 	pip := uint16(rand.Uint32())
-	data := encodeData(message, pip)
+	data[2] = byte(pip >> 8)
+	data[3] = byte(pip >> 8)
 	cryptPacket(data)
-	return data
 }
 
-func encodeData(message *Message, pip uint16) []byte {
+func encodeMessage(message *Message) []byte {
 	var buf bytes.Buffer
 	buf.WriteByte(message.ManuId)
 	buf.WriteByte(message.ProdId)
-	buf.WriteByte(byte(pip >> 8))
-	buf.WriteByte(byte(pip))
+	// space for PIP (2 bytes)
+	buf.WriteByte(0)
+	buf.WriteByte(0)
 
 	buf.WriteByte(byte(message.SensorId >> 16))
 	buf.WriteByte(byte(message.SensorId >> 8))

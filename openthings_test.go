@@ -127,24 +127,13 @@ func TestBadPackets(t *testing.T) {
 	}
 }
 
-func ExampleEncodeData() {
-	message := Message{
-		ManuId: 0x04, ProdId: 0x03, SensorId: 0x00098b,
-		Records: []Record{Join{}},
-	}
-	data := encodeData(&message, 0x78cf)
-	fmt.Println(hex.EncodeToString(data))
-	// Output:
-	// 040378cf00098bea00000cab
-}
-
 func ExampleEncodeMessageJoin() {
 	message := Message{
-		ManuId: 0x04, ProdId: 0x03, SensorId: 0x00097f,
+		ManuId: 0x04, ProdId: 0x03, SensorId: 0x00098b,
 		Records: []Record{Join{}},
 	}
 	data := encodeMessage(&message)
 	fmt.Println(hex.EncodeToString(data))
 	// Output:
-	// 04030442d1f81705d1d90f30
+	// 0403000000098bea00000cab
 }

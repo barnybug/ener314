@@ -3,7 +3,6 @@ package ener314
 import (
 	"fmt"
 	"log"
-	"time"
 )
 
 type Device struct {
@@ -44,35 +43,53 @@ func (d *Device) Start() error {
 
 	log.Println("Clearing FIFO...")
 	d.hrf.ClearFifo()
-
-	identified := map[uint32]bool{}
-	for {
-		msg := d.hrf.ReceiveFSKMessage()
-		if msg == nil {
-			time.Sleep(100 * time.Millisecond)
-		} else {
-			log.Println("Received:", msg)
-
-			if _, ok := identified[msg.SensorId]; !ok {
-				d.Identify(msg.SensorId)
-				identified[msg.SensorId] = true
-			}
-		}
-	}
 	return nil
 }
 
-func (d *Device) Identify(sensorId uint32) {
+func (d *Device) Receive() *Message {
+	msg := d.hrf.ReceiveFSKMessage()
+	if msg == nil {
+		return nil
+	}
+	if msg.ManuId != energenieManuId {
+		log.Printf("Warning: ignored message from manufacturer %d", msg.ManuId)
+		return nil
+	}
+	if msg.ProdId != eTRVProdId {
+		log.Printf("Warning: ignored message from product %d", msg.ProdId)
+		return nil
+	}
+	if len(msg.Records) == 0 {
+		log.Println("Warning: ignoring message with 0 records")
+		return nil
+	}
+	return msg
+}
 
-	log.Println("Asking for identification")
+func (d *Device) Respond(sensorId uint32, record Record) {
 	message := &Message{
-		ManuId:   engManufacturerId,
-		ProdId:   eTRVProductId,
+		ManuId:   energenieManuId,
+		ProdId:   eTRVProdId,
 		SensorId: sensorId,
-		Records:  []Record{Identify{}},
+		Records:  []Record{record},
 	}
 	err := d.hrf.SendFSKMessage(message)
 	if err != nil {
 		log.Println("Error sending", err)
 	}
+}
+
+func (d *Device) Identify(sensorId uint32) {
+	log.Printf("Requesting identify from device %06x", sensorId)
+	d.Respond(sensorId, Identify{})
+}
+
+func (d *Device) Join(sensorId uint32) {
+	log.Printf("Responding to Join from device %06x", sensorId)
+	d.Respond(sensorId, JoinReport{})
+}
+
+func (d *Device) Voltage(sensorId uint32) {
+	log.Printf("Requesting Voltage from device %06x", sensorId)
+	d.Respond(sensorId, Voltage{})
 }
