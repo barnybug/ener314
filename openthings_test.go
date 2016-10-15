@@ -53,7 +53,29 @@ var decodeFloat64Table = []struct {
 
 func TestDecodeFloat64(t *testing.T) {
 	for _, tt := range decodeFloat64Table {
-		assert.Equal(t, decodeFloat64(tt.code, tt.value), tt.expected)
+		assert.Equal(t, tt.expected, decodeFloat64(tt.code, tt.value))
+	}
+}
+
+var encodeFloat64Table = []struct {
+	enc      byte
+	value    float64
+	expected []byte
+}{
+	// 1001 Signed x.8 fixed point integer
+	{ENC_SFPp8, 9.5, []byte{0x92, 0x09, 0x80}},
+	{ENC_SFPp8, 10.0, []byte{0x92, 0x0a, 0x00}},
+	{ENC_SFPp8, 10.0625, []byte{0x92, 0x0a, 0x10}},
+	{ENC_SFPp8, 10.125, []byte{0x92, 0x0a, 0x20}},
+	{ENC_SFPp8, 10.25, []byte{0x92, 0x0a, 0x40}},
+	{ENC_SFPp8, 10.5, []byte{0x92, 0x0a, 0x80}},
+	{ENC_SFPp8, 18.5, []byte{0x92, 0x12, 0x80}},
+	{ENC_SFPp8, 256.0, []byte{0x93, 0x01, 0x00, 0x00}},
+}
+
+func TestEncodeFloat64(t *testing.T) {
+	for _, tt := range encodeFloat64Table {
+		assert.Equal(t, tt.expected, encodeFloat64(tt.enc, tt.value))
 	}
 }
 

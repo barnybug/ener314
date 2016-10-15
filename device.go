@@ -98,3 +98,17 @@ func (d *Device) ExerciseValve(sensorId uint32) {
 	log.Printf("Requesting exercise value for device %06x", sensorId)
 	d.Respond(sensorId, ExerciseValve{})
 }
+
+func (d *Device) Diagnostics(sensorId uint32) {
+	log.Printf("Requesting diagnostics for device %06x", sensorId)
+	d.Respond(sensorId, Diagnostics{})
+}
+
+func (d *Device) TargetTemperature(sensorId uint32, temp float64) {
+	if temp < 4 || temp > 30 {
+		log.Printf("Temperature out of range: 4 < %.2f < 30, refusing", temp)
+		return
+	}
+	log.Printf("Setting target temperature for device %06x to %.2fC", sensorId, temp)
+	d.Respond(sensorId, Temperature{temp})
+}

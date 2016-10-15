@@ -51,7 +51,7 @@ const (
 	   Unsigned Integer Length 0
 	*/
 
-	OT_REQUEST_DIAGNOTICS = 0xA6 /*   Read diagnostic flags from driver board and report
+	OT_REQUEST_DIAGNOSTICS = 0xA6 /*   Read diagnostic flags from driver board and report
 	     these to gateway Flash red LED once every 5 seconds
 	     if ‘battery dead’ flag is set
 	     Unsigned Integer Length 0
@@ -344,39 +344,62 @@ func encodeMessage(message *Message) []byte {
 	return buf.Bytes()
 }
 
-func encodeFixedPoint(value float64, mantissa uint, signed bool) []byte {
-	return []byte{}
+func encodeFixedPoint(enc byte, value float64, mantissa uint, signed bool) []byte {
+	// TODO: handle signed
+	var buf bytes.Buffer
+	e := 1 << mantissa
+	var encoded uint32 = uint32(value * float64(e))
+	var bytes byte
+	if encoded <= 0xff {
+		bytes = 1
+	} else if encoded < 0xffff {
+		bytes = 2
+	} else if encoded < 0xffffff {
+		bytes = 3
+	} else {
+		bytes = 4
+	}
+
+	typeDesc := enc<<4 + bytes
+	buf.WriteByte(typeDesc)
+	// Big endian
+	for ; bytes > 0; bytes -= 1 {
+		b := byte(encoded >> ((bytes - 1) * 8))
+		buf.WriteByte(b)
+	}
+
+	return buf.Bytes()
 }
 
-func encodeFloat64(typ byte, value float64) []byte {
-	switch typ {
+func encodeFloat64(enc byte, value float64) []byte {
+	switch enc {
 	case ENC_UINT: // Unsigned x.0 normal integer
-		return encodeFixedPoint(value, 0, false)
+		return encodeFixedPoint(enc, value, 0, false)
 	case ENC_UFPp4: // Unsigned x.4 fixed point integer
-		return encodeFixedPoint(value, 4, false)
+		return encodeFixedPoint(enc, value, 4, false)
 	case ENC_UFPp8: // Unsigned x.8 fixed point integer
-		return encodeFixedPoint(value, 8, false)
+		return encodeFixedPoint(enc, value, 8, false)
 	case ENC_UFPp12: // Unsigned x.12 fixed point integer
-		return encodeFixedPoint(value, 12, false)
+		return encodeFixedPoint(enc, value, 12, false)
 	case ENC_UFPp16: // Unsigned x.16 fixed point integer
-		return encodeFixedPoint(value, 16, false)
+		return encodeFixedPoint(enc, value, 16, false)
 	case ENC_UFPp20: // Unsigned x.20 fixed point integer
-		return encodeFixedPoint(value, 20, false)
+		return encodeFixedPoint(enc, value, 20, false)
 	case ENC_UFPp24: // Unsigned x.24 fixed point integer
-		return encodeFixedPoint(value, 24, false)
+		return encodeFixedPoint(enc, value, 24, false)
 	case ENC_CHARS: // Characters
 		return []byte(fmt.Sprint(value))
 	case ENC_SINT: // Signed x.0 normal integer
-		return encodeFixedPoint(value, 0, true)
+		return encodeFixedPoint(enc, value, 0, true)
 	case ENC_SFPp8: // Signed x.8 fixed point integer
-		return encodeFixedPoint(value, 8, true)
+		return encodeFixedPoint(enc, value, 8, true)
 	case ENC_SFPp16: // Signed x.16 fixed point integer
-		return encodeFixedPoint(value, 16, true)
+		return encodeFixedPoint(enc, value, 16, true)
 	case ENC_SFPp24: // Signed x.24 fixed point integer
-		return encodeFixedPoint(value, 24, true)
+		return encodeFixedPoint(enc, value, 24, true)
 	case ENC_ENUM: // Enumeration
 		// Just treat as unsigned integer
-		return encodeFixedPoint(value, 0, false)
+		return encodeFixedPoint(ENC_UINT, value, 0, false)
 	case ENC_RESV1, ENC_RESV2: // Reserved
 	case ENC_IEEE: // IEEE754-2008 floating point
 		// untesed - 32 or 64?

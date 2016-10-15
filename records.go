@@ -30,7 +30,10 @@ func (t Temperature) String() string {
 }
 
 func (t Temperature) Encode(buf io.ByteWriter) {
-	buf.WriteByte(OT_TEMP_REPORT)
+	buf.WriteByte(OT_TEMP_SET)
+	for _, b := range encodeFloat64(ENC_SFPp8, t.Value) {
+		buf.WriteByte(b)
+	}
 	buf.WriteByte(0)
 }
 
@@ -43,7 +46,7 @@ func (v Voltage) String() string {
 }
 
 func (v Voltage) Encode(buf io.ByteWriter) {
-	buf.WriteByte(OT_VOLTAGE)
+	buf.WriteByte(OT_REQUEST_VOLTAGE)
 	buf.WriteByte(0)
 }
 
@@ -83,7 +86,7 @@ func (v Diagnostics) String() string {
 }
 
 func (v Diagnostics) Encode(buf io.ByteWriter) {
-	buf.WriteByte(OT_VOLTAGE)
+	buf.WriteByte(OT_REQUEST_DIAGNOSTICS)
 	buf.WriteByte(0)
 }
 
@@ -111,17 +114,6 @@ func (i Identify) String() string {
 
 func (i Identify) Encode(buf io.ByteWriter) {
 	buf.WriteByte(OT_IDENTIFY)
-	buf.WriteByte(0)
-}
-
-type TargetTemperature struct{}
-
-func (i TargetTemperature) String() string {
-	return "TargetTemperature"
-}
-
-func (i TargetTemperature) Encode(buf io.ByteWriter) {
-	buf.WriteByte(OT_TEMP_SET)
 	buf.WriteByte(0)
 }
 

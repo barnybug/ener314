@@ -34,9 +34,15 @@ func main() {
 			dev.Join(msg.SensorId)
 		case ener314.Temperature:
 			log.Printf("%06x Temperature: %.2f°C\n", msg.SensorId, t.Value)
-			// dev.ExerciseValve(msg.SensorId)
+			if msg.SensorId == 0x00098b {
+				dev.TargetTemperature(msg.SensorId, 25)
+			}
+			// dev.Voltage(msg.SensorId)
+			// dev.Diagnostics(msg.SensorId)
 		case ener314.Voltage:
 			log.Printf("%06x Voltage: %.2fV\n", msg.SensorId, t.Value)
+		case ener314.Diagnostics:
+			log.Printf("%06x Diagnostic report: %s\n", msg.SensorId, t)
 		}
 	}
 }
