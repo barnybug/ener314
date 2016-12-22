@@ -54,6 +54,10 @@ creating groups 'gpio' and 'spi' and adding your current user to the groups
 
 The ENER314-RT is a HopeRF RFM96W chip connected to the Raspberry Pi SPI bus.
 
+The datasheet for the RFM96W is here:
+
+http://www.hoperf.com/upload/rf/RFM69W-V1.3.pdf
+
 The library uses spidev and gpiomem to communicate with the device. gpiomem is
 used to control the Reset and LED pins, and spidev handles the SPI master-
 slave comms.

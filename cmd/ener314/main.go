@@ -45,5 +45,7 @@ func main() {
 		case ener314.Diagnostics:
 			log.Printf("%06x Diagnostic report: %s\n", msg.SensorId, t)
 		}
+
+		log.Printf("RSSI: %.1fdB", dev.GetRSSI())
 	}
 }
