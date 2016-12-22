@@ -105,6 +105,8 @@ const (
 	MASK_PAYLOADRDY       = 0x04
 	MASK_RSSIDONE         = 0x02
 	MASK_RSSISTART        = 0x01
+	MASK_TEMPMEASSTART    = 0x08
+	MASK_TEMPMEASRUNNING  = 0x04
 
 	/* Precise register description can be found on:
 	 * www.hoperf.com/upload/rf/RFM69W-V1.3.pdf
@@ -269,6 +271,20 @@ func (self *HRF) GetRSSI() float32 {
 	self.regW(ADDR_RSSICONFIG, MASK_RSSISTART)
 	self.WaitFor(ADDR_RSSICONFIG, MASK_RSSIDONE, true)
 	return -float32(self.regR(ADDR_RSSIVALUE)) / 2
+}
+
+func (self *HRF) GetTemperature() int {
+	// must be in standby
+	self.regW(ADDR_OPMODE, MODE_STANDBY)
+	// request temperature
+	self.regW(ADDR_TEMP1, MASK_TEMPMEASSTART)
+	// wait for measuring to finish running
+	self.WaitFor(ADDR_TEMP1, MASK_TEMPMEASRUNNING, false)
+	// approx figure - needs calibration
+	temp := 160 - int(self.regR(ADDR_TEMP2))
+	// switch back to receiver
+	self.regW(ADDR_OPMODE, MODE_RECEIVER)
+	return temp
 }
 
 func (self *HRF) ReceiveFSKMessage() *Message {

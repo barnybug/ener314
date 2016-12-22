@@ -52,9 +52,9 @@ creating groups 'gpio' and 'spi' and adding your current user to the groups
 
 ### Technical details
 
-The ENER314-RT is a HopeRF RFM96W chip connected to the Raspberry Pi SPI bus.
+The ENER314-RT is a HopeRF RFM69W chip connected to the Raspberry Pi SPI bus.
 
-The datasheet for the RFM96W is here:
+The datasheet for the RFM69W is here:
 
 http://www.hoperf.com/upload/rf/RFM69W-V1.3.pdf
 

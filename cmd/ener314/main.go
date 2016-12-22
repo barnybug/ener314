@@ -20,6 +20,8 @@ func main() {
 	err := dev.Start()
 	fatalIfErr(err)
 
+	log.Printf("Device temperature (approx): %dC", dev.GetTemperature())
+
 	for {
 		// poll receive
 		msg := dev.Receive()
@@ -46,6 +48,7 @@ func main() {
 			log.Printf("%06x Diagnostic report: %s\n", msg.SensorId, t)
 		}
 
+		log.Printf("Device temperature (approx): %dC", dev.GetTemperature())
 		log.Printf("RSSI: %.1fdB", dev.GetRSSI())
 	}
 }
