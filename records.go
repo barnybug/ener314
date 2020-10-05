@@ -39,6 +39,19 @@ func (t Temperature) Encode(buf ByteAndBytesWriter) {
 	buf.Write(encodeFloat64(ENC_SFPp8, t.Value))
 }
 
+type SetTemperature struct {
+	Value float64
+}
+
+func (t SetTemperature) String() string {
+	return fmt.Sprintf("SetTemperature{%f}", t.Value)
+}
+
+func (t SetTemperature) Encode(buf ByteAndBytesWriter) {
+	buf.WriteByte(OT_TEMP_SET)
+	buf.Write(encodeFloat64(ENC_SFPp8, t.Value))
+}
+
 type Voltage struct {
 	Value float64
 }

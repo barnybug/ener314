@@ -302,6 +302,8 @@ func decodePacket(data []byte) (*Message, error) {
 			record = Join{}
 		case OT_TEMP_REPORT:
 			record = Temperature{decodeFloat64(typeDesc, value)}
+		case OT_TEMP_SET:
+			record = SetTemperature{decodeFloat64(typeDesc, value)}
 		case OT_VOLTAGE:
 			record = Voltage{decodeFloat64(typeDesc, value)}
 		case OT_REPORT_DIAGNOSTICS:

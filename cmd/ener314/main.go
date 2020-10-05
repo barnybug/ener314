@@ -30,25 +30,27 @@ func main() {
 			continue
 		}
 
-		record := msg.Records[0] // only examine first record
-		switch t := record.(type) {
-		case ener314.Join:
-			log.Printf("%06x Join\n", msg.SensorId)
-			dev.Join(msg.SensorId)
-		case ener314.Temperature:
-			log.Printf("%06x Temperature: %.2f°C\n", msg.SensorId, t.Value)
-			// dev.TargetTemperature(msg.SensorId, 10)
-			// dev.Voltage(msg.SensorId)
-			// dev.Diagnostics(msg.SensorId)
-			// dev.SetValveState(msg.SensorId, ener314.VALVE_STATE_OPEN)
-			// dev.ReportInterval(msg.SensorId, 300)
-		case ener314.Voltage:
-			log.Printf("%06x Voltage: %.2fV\n", msg.SensorId, t.Value)
-		case ener314.Diagnostics:
-			log.Printf("%06x Diagnostic report: %s\n", msg.SensorId, t)
+		for _, record := range msg.Records {
+			switch t := record.(type) {
+			case ener314.Join:
+				log.Printf("%06x Join\n", msg.SensorId)
+				dev.Join(msg.SensorId)
+			case ener314.Temperature:
+				log.Printf("%06x Temperature: %.2f°C\n", msg.SensorId, t.Value)
+				// dev.TargetTemperature(msg.SensorId, 10)
+				// dev.Voltage(msg.SensorId)
+				// dev.Diagnostics(msg.SensorId)
+				// dev.SetValveState(msg.SensorId, ener314.VALVE_STATE_OPEN)
+				// dev.ReportInterval(msg.SensorId, 300)
+			case ener314.SetTemperature:
+				log.Printf("%06x Set temperature: %.2f°C\n", msg.SensorId, t.Value)
+			case ener314.Voltage:
+				log.Printf("%06x Voltage: %.2fV\n", msg.SensorId, t.Value)
+			case ener314.Diagnostics:
+				log.Printf("%06x Diagnostic report: %s\n", msg.SensorId, t)
+			default:
+				log.Printf("%06x Unknown: %#v\n", msg.SensorId, t)
+			}
 		}
-
-		log.Printf("Device temperature (approx): %dC", dev.GetTemperature())
-		log.Printf("RSSI: %.1fdB", dev.GetRSSI())
 	}
 }
