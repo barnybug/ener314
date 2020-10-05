@@ -1,6 +1,6 @@
 ## ener314
 
-[![Build Status](https://travis-ci.org/barnybug/ener314.svg?branch=master)](https://travis-ci.org/barnybug/ener314)
+![Build Status](https://github.com/barnybug/ener314/workflows/Test/badge.svg)
 [![GoDoc](https://godoc.org/github.com/barnybug/ener314?status.svg)](http://godoc.org/github.com/barnybug/ener314)
 
 Go library for the Energenie ENER314-RT transceiver for the Raspberry Pi:
