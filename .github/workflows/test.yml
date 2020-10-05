@@ -1,0 +1,22 @@
+name: Test
+on: [push]
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: '1.14'
+
+    - name: Download Go dependencies
+      env:
+        GOPROXY: "https://proxy.golang.org"
+      run: go mod download
+
+    - name: Run tests
+      run: go test -v
+
+    - name: Build cmd/ener314
+      run: go build ./cmd/ener314

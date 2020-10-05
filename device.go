@@ -110,7 +110,7 @@ func (d *Device) TargetTemperature(sensorId uint32, temp float64) {
 
 func (d *Device) ReportInterval(sensorId uint32, interval uint16) {
 	if interval < 1 || interval > 3600 {
-		logf(LOG_WARN, "Interval out of range: 1 < %.2f < 3600, refusing", interval)
+		logf(LOG_WARN, "Interval out of range: 1 < %d < 3600, refusing", interval)
 		return
 	}
 	logf(LOG_INFO, "Setting report interval for device %06x to %ds", sensorId, interval)
