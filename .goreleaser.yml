@@ -1,0 +1,20 @@
+builds:
+  - binary: ener314
+    main: ./cmd/ener314
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - 386
+      - arm
+    ignore:
+      - goos: darwin
+        goarch: 386
+
+archives:
+- name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+  format: binary
+  replacements:
+    darwin: mac
